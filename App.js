@@ -4,54 +4,57 @@ import Loading from './Loading'
 import * as Location from 'expo-location'
 import { Alert } from 'react-native'
 import axios from 'axios'
+import Weather from './Weather';
 
+const API_KEY = "91baf0b0bcae84ab28d15c0d735325db"
 
-export default function App() {
-  // // getweather API 키
-  const API_KEY = "91baf0b0bcae84ab28d15c0d735325db"
-  const [loading, setLoading] = useState(true)
+export default class extends React.Component {
 
-  const getWeather = async (latitude, longitude) => {
-    // const { data } = await axios.get(`api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${API_KEY}
-    // `)
-    console.log('data')
-  }
-
+  state = {
+    isLoading: true
+  };
+  getWeather = async (latitude, longitude) => {
+    const {
+      data: {
+        main: { temp },
+        weather
+      }
+    } = await axios.get(
+      `http://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&APPID=${API_KEY}&units=metric`
+    );
+    console.log(weather)
+    console.log(temp)
+    this.setState({
+      isLoading: false,
+      condition: weather[0].main,
+      temp
+    });
+  };
   getLocation = async () => {
     try {
-      // 사용자 위치 정보 가져오기 허가 요청
-      // {}(블록)안에 error 가 생기면 catch로 넘어간다
-      await Location.requestPermissionsAsync()
+      await Location.requestForegroundPermissionsAsync();
+      const {
+        coords: { latitude, longitude }
+      } = await Location.getCurrentPositionAsync();
+      this.getWeather(latitude, longitude);
 
-      // 사용자 위치 정보 가져오기
-      // 경도 위도 정보를 날씨 api에 전달해서 날씨를 받아온다
-      const { coords: { latitude, longitude } } = await
-        Location.getCurrentPositionAsync();
-      console.log(coords)
-      getWeather(latitude, longitude)
-      // 위도, 경도 등 위치정보를 가져온다
-      //console.log(coords)
-      setLoading(false)
     } catch (error) {
-
-      Alert.alert('위치 정보를 가져올 수 없습니다😅', error)
+      Alert.alert("Can't find you.", "So sad");
     }
 
+  };
+  componentDidMount() {
+    this.getLocation();
   }
-
-  useEffect(() => {
-    getLocation()
-  }, [])
-
-  return (
-    <>
-      {loading ? <Loading /> : null}
-    </>
-
-
-  );
+  render() {
+    const { isLoading, temp, condition } = this.state;
+    return isLoading ? (
+      <Loading />
+    ) : (
+      <Weather temp={Math.round(temp)} condition={condition} />
+    );
+  }
 }
-
 // const styles = StyleSheet.create({
 //   container: {
 //     //container의 flex direction은 기본적으로 column
